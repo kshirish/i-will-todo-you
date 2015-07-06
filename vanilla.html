@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Vanilla js</title>
+	<link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+	<style>
+		body {
+			font-family: 'Lato', sans-serif;
+			background-color: #F5F8FA;
+		}
+		.container {
+			width: 50%;
+			margin: 0 auto;
+			background-color: #fff;
+		}
+		header, footer {
+			text-align: center;
+			padding: 20px 0;
+		}
+		input[type="text"] {
+			line-height: 1.8em;
+			font-size: 24px;
+			width: 100%;
+			box-sizing: border-box;
+			border: 1px solid #ddd;
+			padding: 5px 50px;
+		}
+		.todo {
+			border: 1px solid #ddd;
+			position: relative;
+		}
+		.todo p {
+			font-size: 24px;
+			padding: 10px 50px;
+			margin: 0;
+		}
+		.todo input[type="text"] {
+			display: none;
+		}
+		.fa.fa-circle-o {
+			top: 10px;
+			left: 10px;
+			font-size: 28px;
+			position: absolute;
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+	
+	<div class="container">
+		<header>
+			<h1>Vanilla js (ECMA5)</h1>
+		</header>
+
+		<section class="todoContainer">
+			<form>
+				<input type="text" placeholder="Write todo here"/>
+			</form>
+
+			<section id="todoList">
+				<article class="todo">
+					<i class="fa fa-circle-o"></i>
+					<p>first todo</p>
+					<input type="text" value=''/>
+				</article>
+			</section>
+		</section>
+
+		<footer>
+			Developed by kshirish
+		</footer>
+	</div>
+	<script>
+		(function(){
+
+			'use strict';
+
+			function TodoList() {
+				var idCounter = 0;
+				var list = [];
+
+				return {
+
+					addTodo : function(task) {
+						
+						var newTodo = new Todo({
+							id: idCounter,
+							task: task,
+							done: false
+						});
+
+						list.push(newTodo);
+						idCounter++;
+					},
+					editTodo : function(updatedTodo) {
+
+						list.some(function(todo, index) {
+
+							if(todo.id === updatedTodo.id) {	// break loop here
+								list[index] = updatedTodo;
+								return true;
+							}
+						});
+
+					},
+					deleteTodo : function(id) {
+						
+						list = list.filter(function(todo) {
+							return todo.id !== id;
+						});
+
+						return list;
+					},
+					getTodo : function(id) {
+						var retTodo;
+
+						list.some(function(todo) {
+
+							if(todo.id === id) {	// break loop here
+								retTodo = todo;
+								return true;
+							}
+						});
+
+						return retTodo;
+					}
+				};	
+			}
+
+			function Todo(task, id) {
+				this.id   = id;
+				this.task = task;
+				this.done = false;
+			}
+
+			Todo.prototype.toggle = function() {
+				this.done = !this.done;	
+			};
+
+			Todo.prototype.edit = function(editedTask) {
+				this.task = editedTask;
+			};
+
+
+			// attach listeners here
+			
+		})();
+	</script>
+</body>
+</html>
