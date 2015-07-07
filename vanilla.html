@@ -152,9 +152,22 @@
 
 			var todoContainer = document.querySelector('.todoContainer');
 			var todoHTML      = document.querySelector('.todo').outerHTML;
+			var addTodoView   = function(e) {
+
+			};
+
+			var editTodoView   = function(e) {
+
+			};
+
+			var deleteTodoView   = function(e) {
+
+			};
 
 			// attach listeners here
-			elem.addEventListener('build', function (e) { ... }, false);
+			todoContainer.addEventListener('ADD', addTodoView, false);
+			todoContainer.addEventListener('EDIT', editTodoView, false);
+			todoContainer.addEventListener('DELETE', deleteTodoView, false);
 			
 		})();
 	</script>
