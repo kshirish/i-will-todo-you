@@ -77,7 +77,7 @@
 
 			'use strict';
 
-			function TodoList() {
+			var TodoList = function () {
 				var idCounter = 0;
 				var list = [];
 
@@ -93,6 +93,8 @@
 
 						list.push(newTodo);
 						idCounter++;
+
+						todoContainer.dispatchEvent(new CustomEvent('ADD', { 'detail': newTodo }));
 					},
 					editTodo : function(updatedTodo) {
 
@@ -104,6 +106,7 @@
 							}
 						});
 
+						todoContainer.dispatchEvent(new CustomEvent('EDIT', { 'detail': updatedTodo }));
 					},
 					deleteTodo : function(id) {
 						
@@ -111,6 +114,7 @@
 							return todo.id !== id;
 						});
 
+						todoContainer.dispatchEvent(new CustomEvent('DELETE', { 'detail': id }));
 						return list;
 					},
 					getTodo : function(id) {
@@ -125,15 +129,18 @@
 						});
 
 						return retTodo;
+					},
+					getAllTodos: function() {
+						return list.slice();	// return the copied array
 					}
 				};	
-			}
+			};
 
-			function Todo(task, id) {
+			var Todo = function (task, id) {
 				this.id   = id;
 				this.task = task;
 				this.done = false;
-			}
+			};
 
 			Todo.prototype.toggle = function() {
 				this.done = !this.done;	
@@ -143,8 +150,11 @@
 				this.task = editedTask;
 			};
 
+			var todoContainer = document.querySelector('.todoContainer');
+			var todoHTML      = document.querySelector('.todo').outerHTML;
 
 			// attach listeners here
+			elem.addEventListener('build', function (e) { ... }, false);
 			
 		})();
 	</script>
