@@ -9,8 +9,92 @@
 			font-family: 'Lato', sans-serif;
 			background-color: #15A363;
 		}
+		.slideLeft{
+			animation-name: slideLeft;
+			-webkit-animation-name: slideLeft;	
+
+			animation-duration: 0.2s;	
+			-webkit-animation-duration: 0.2s;
+
+			animation-timing-function: ease-in-out;	
+			-webkit-animation-timing-function: ease-in-out;		
+			
+			animation-direction: alternate-reverse;
+			-webkit-animation-direction: alternate-reverse;
+			visibility: visible !important;	
+		}
+		@keyframes slideLeft {
+			0% {
+				transform: translateX(150%);
+			}			
+			100% {
+				transform: translateX(0%);
+			}
+		}
+		@-webkit-keyframes slideLeft {
+			0% {
+				-webkit-transform: translateX(150%);
+			}			
+			100% {
+				-webkit-transform: translateX(0%);
+			}
+		}
+		.slideDown{
+			animation-name: slideDown;
+			-webkit-animation-name: slideDown;	
+
+			animation-duration: 1s;	
+			-webkit-animation-duration: 1s;
+
+			animation-timing-function: ease;	
+			-webkit-animation-timing-function: ease;	
+
+			visibility: visible !important;						
+		}
+
+		@keyframes slideDown {
+			0% {
+				transform: translateY(-100%);
+			}
+			50%{
+				transform: translateY(8%);
+			}
+			65%{
+				transform: translateY(-4%);
+			}
+			80%{
+				transform: translateY(4%);
+			}
+			95%{
+				transform: translateY(-2%);
+			}			
+			100% {
+				transform: translateY(0%);
+			}		
+		}
+
+		@-webkit-keyframes slideDown {
+			0% {
+				-webkit-transform: translateY(-100%);
+			}
+			50%{
+				-webkit-transform: translateY(8%);
+			}
+			65%{
+				-webkit-transform: translateY(-4%);
+			}
+			80%{
+				-webkit-transform: translateY(4%);
+			}
+			95%{
+				-webkit-transform: translateY(-2%);
+			}			
+			100% {
+				-webkit-transform: translateY(0%);
+			}	
+		}
 		.container {
-			width: 50%;
+			width: 100%;
 			margin: 0 auto;
 			background-color: #fff;
 		}
@@ -25,6 +109,11 @@
 			box-sizing: border-box;
 			border: 1px solid #ddd;
 			padding: 5px 50px;
+		}
+		input[type="text"]:focus {
+			outline: none;
+			border: 1px solid #B5EFD5;
+			box-sizing: border-box;			
 		}
 		.todo {
 			border: 1px solid #ddd;
@@ -52,6 +141,21 @@
 		}
 		article {
 			cursor: pointer;
+		}
+		@media (min-width: 700px) {
+			.container {
+				width: 80%;
+			}
+		}
+		@media (min-width: 1000px) {
+			.container {
+				width: 65%;
+			}
+		}
+		@media (min-width: 1200px) {
+			.container {
+				width: 50%;
+			}
 		}
 	</style>
 </head>
@@ -156,7 +260,7 @@
 
 			var addTodoView   = function(e) {
 
-				var todoHTML  = '<article class="todo" id="'+e.detail.id+'">'+
+				var todoHTML  = '<article class="todo slideDown" id="'+e.detail.id+'">'+
 									'<i class="fa fa-circle-o"></i>'+
 									'<p>'+e.detail.task+'</p>'+
 									'<i class="fa fa-trash-o"></i>'+
@@ -195,7 +299,12 @@
 
 			var deleteTodoView   = function(e) {
 
-				todoList.querySelector('#' + e.detail).outerHTML = '';
+				todoList.querySelector('#' + e.detail).className = 'todo slideLeft';
+				
+				// for the sake of animation after deleting
+				setTimeout(function(){
+					todoList.querySelector('#' + e.detail).outerHTML = '';
+				}, 200);
 			};
 
 			var getAllTodosView = function() {
