@@ -161,7 +161,7 @@
 </head>
 <body>
 	
-	<div class="container">
+	<section class="container">
 		<header>
 			<h1>Vanilla js (ECMA5)</h1>
 		</header>
@@ -178,12 +178,16 @@
 		<footer>
 			Developed by kshirish
 		</footer>
-	</div>
+	</section>
 	
 	<script>
-		(function(){
+		(function(document){
 
 			'use strict';
+
+			var todoContainer = document.querySelector('.todoContainer');
+			var todoList   	  = document.querySelector('#todoList');
+			var form          = document.querySelector('form');
 
 			var TodoList = (function () {
 				var idCounter = 0;
@@ -197,7 +201,6 @@
 
 						list.push(newTodo);
 						idCounter++;
-
 						todoContainer.dispatchEvent(new CustomEvent('ADD', { 'detail': newTodo }));
 					},
 					editTodo : function(updatedTodo) {
@@ -219,20 +222,6 @@
 						});
 
 						todoContainer.dispatchEvent(new CustomEvent('DELETE', { 'detail': id }));
-						return list;
-					},
-					getTodo : function(id) {
-						var retTodo;
-
-						list.some(function(todo) {
-
-							if(todo.id === id) {	// break loop here
-								retTodo = todo;
-								return true;
-							}
-						});
-
-						return retTodo;
 					},
 					getAllTodos: function() {
 						return list.slice();	// return the copied array
@@ -240,23 +229,12 @@
 				};	
 			})();
 
+			// Todo Class
 			var Todo = function (task, id) {
 				this.id   = id;
 				this.task = task;
 				this.done = false;
 			};
-
-			Todo.prototype.toggle = function() {
-				this.done = !this.done;	
-			};
-
-			Todo.prototype.edit = function(editedTask) {
-				this.task = editedTask;
-			};
-
-			var todoContainer = document.querySelector('.todoContainer');
-			var todoList   	  = document.querySelector('#todoList');
-			var form          = document.querySelector('form');
 
 			var addTodoView   = function(e) {
 
@@ -267,43 +245,52 @@
 									'<input type="text" value="'+e.detail.task+'"/>'+
 								'</article>';
 
-                todoList.insertAdjacentHTML('beforeend', todoHTML);		
+				var inputBlurHandler = function(event) {
+					
+					toggleTodo(event, true);
+					
+					TodoList.editTodo({
+						id: e.detail.id,
+						task: event.target.value,
+						done: false
+					});
 
+				};
+
+				// append newtodo in the end as well as retaining the 
+				// event handlers: cannot use innerHTML here				
+                todoList.insertAdjacentHTML('beforeend', todoHTML);		
                 // set event handlers here for todo
                 todoList.querySelector('#' + e.detail.id + ' input')
-	                .addEventListener('blur', function(event) {
-					
-						toggleTodo(event, true);
-						
-						TodoList.editTodo({
-							id: e.detail.id,
-							task: event.target.value,
-							done: false
-						});
+                	.addEventListener('blur', inputBlurHandler, false);						
 
-					}, false);						
-				};
+			};
 
 			var editTodoView   = function(e) {
 
-                todoList.querySelector('#' + e.detail.id + ' p').innerHTML = e.detail.task;
+				var p = todoList.querySelector('#' + e.detail.id + ' p');
+				var i = todoList.querySelector('#' + e.detail.id + ' i');
+
+                p.innerHTML = e.detail.task;
                 
                 if(e.detail.done) {
-                	todoList.querySelector('#' + e.detail.id + ' i').className = 'fa fa-check-circle-o';
-                	todoList.querySelector('#' + e.detail.id + ' p').style.textDecoration = 'line-through';
+                	i.className = 'fa fa-check-circle-o';
+                	p.style.textDecoration = 'line-through';
                 } else {
-                	todoList.querySelector('#' + e.detail.id + ' i').className = 'fa fa-circle-o';
-                	todoList.querySelector('#' + e.detail.id + ' p').style.textDecoration = 'none';
+                	i.className = 'fa fa-circle-o';
+                	p.style.textDecoration = 'none';
                 }
+
 			};
 
 			var deleteTodoView   = function(e) {
 
-				todoList.querySelector('#' + e.detail).className = 'todo slideLeft';
+				var article = todoList.querySelector('#' + e.detail);
+				article.className = 'todo slideLeft';
 				
 				// for the sake of animation after deleting
 				setTimeout(function(){
-					todoList.querySelector('#' + e.detail).outerHTML = '';
+					article.outerHTML = '';
 				}, 200);
 			};
 
@@ -340,31 +327,29 @@
 				
 			};
 
-			// attach listeners here
+			// listening to model changes here
 			todoContainer.addEventListener('ADD', addTodoView, false);
 			todoContainer.addEventListener('EDIT', editTodoView, false);
 			todoContainer.addEventListener('DELETE', deleteTodoView, false);
 
-			// toggles the state of todo
-			todoList
-				.addEventListener('click', function(e) {
+			// listening to delete and check icon here
+			todoList.addEventListener('click', function(e) {
 			
-					var classname = e.target.className;
+				var classname = e.target.className;
 
-					if(classname.indexOf('circle') !== -1) {
+				if(classname.indexOf('circle') !== -1) {
 
-						TodoList.editTodo({
-							id: e.target.parentElement.id,
-							task: e.target.nextSibling.textContent,
-							done: classname === 'fa fa-circle-o'
-						});					
+					TodoList.editTodo({
+						id: e.target.parentElement.id,
+						task: e.target.nextSibling.textContent,
+						done: classname === 'fa fa-circle-o'
+					});					
 
-					} else if(classname.indexOf('trash') !== -1) {
+				} else if(classname.indexOf('trash') !== -1) {
 
-						TodoList.deleteTodo(e.target.parentElement.id);
-					}
-
-				});
+					TodoList.deleteTodo(e.target.parentElement.id);
+				}
+			});
 
 			todoList.addEventListener('dblclick', toggleTodo, false);
 
@@ -381,7 +366,7 @@
 			// show all the todos
 			getAllTodosView();
 
-		})();
+		})(document);
 	</script>
 </body>
 </html>
