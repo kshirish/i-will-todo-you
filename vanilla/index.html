@@ -8,6 +8,7 @@
 		body {
 			font-family: 'Lato', sans-serif;
 			background-color: #15A363;
+			overflow: hidden;
 		}
 		.slideLeft{
 			animation-name: slideLeft;
@@ -181,192 +182,264 @@
 	</section>
 	
 	<script>
-		(function(document){
+	(function(document) {
 
-			'use strict';
+        'use strict';
 
-			var todoContainer = document.querySelector('.todoContainer');
-			var todoList   	  = document.querySelector('#todoList');
-			var form          = document.querySelector('form');
+        // Pubsub Module
+        var Pubsub = (function() {
 
-			var TodoList = (function () {
-				var idCounter = 0;
-				var list = [];
+            var pubsubModel = {};
 
-				return {
+            return {
+                subscribe: function(event, handler) {
 
-					addTodo : function(task) {
-						
-						var newTodo = new Todo(task, 'TODO' + idCounter);
+                    pubsubModel[event] = pubsubModel[event] || [];
+                    pubsubModel[event].push(handler);
 
-						list.push(newTodo);
-						idCounter++;
-						todoContainer.dispatchEvent(new CustomEvent('ADD', { 'detail': newTodo }));
-					},
-					editTodo : function(updatedTodo) {
+                },
+                unsubscribe: function(event, handler) {
 
-						list.some(function(todo, index) {
+                    var handlerString = handler.toString();
+                    pubsubModel[event] = pubsubModel[event].filter(function(h) {
 
-							if(todo.id === updatedTodo.id) {	// break loop here
-								list[index] = updatedTodo;
-								return true;
-							}
-						});
+                        return h.toString() !== handlerString;
+                    });
+                },
+                publish: function(event, data) {
 
-						todoContainer.dispatchEvent(new CustomEvent('EDIT', { 'detail': updatedTodo }));
-					},
-					deleteTodo : function(id) {
-						
-						list = list.filter(function(todo) {
-							return todo.id !== id;
-						});
-
-						todoContainer.dispatchEvent(new CustomEvent('DELETE', { 'detail': id }));
-					},
-					getAllTodos: function() {
-						return list.slice();	// return the copied array
-					}
-				};	
-			})();
-
-			// Todo Class
-			var Todo = function (task, id) {
-				this.id   = id;
-				this.task = task;
-				this.done = false;
-			};
-
-			var addTodoView   = function(e) {
-
-				var todoHTML  = '<article class="todo slideDown" id="'+e.detail.id+'">'+
-									'<i class="fa fa-circle-o"></i>'+
-									'<p>'+e.detail.task+'</p>'+
-									'<i class="fa fa-trash-o"></i>'+
-									'<input type="text" value="'+e.detail.task+'"/>'+
-								'</article>';
-
-				var inputBlurHandler = function(event) {
-					
-					toggleTodo(event, true);
-					
-					TodoList.editTodo({
-						id: e.detail.id,
-						task: event.target.value,
-						done: false
-					});
-
-				};
-
-				// append newtodo in the end as well as retaining the 
-				// event handlers: cannot use innerHTML here				
-                todoList.insertAdjacentHTML('beforeend', todoHTML);		
-                // set event handlers here for todo
-                todoList.querySelector('#' + e.detail.id + ' input')
-                	.addEventListener('blur', inputBlurHandler, false);						
-
-			};
-
-			var editTodoView   = function(e) {
-
-				var p = todoList.querySelector('#' + e.detail.id + ' p');
-				var i = todoList.querySelector('#' + e.detail.id + ' i');
-
-                p.innerHTML = e.detail.task;
-                
-                if(e.detail.done) {
-                	i.className = 'fa fa-check-circle-o';
-                	p.style.textDecoration = 'line-through';
-                } else {
-                	i.className = 'fa fa-circle-o';
-                	p.style.textDecoration = 'none';
+                    pubsubModel[event].forEach(function(func) {
+                        func(data);
+                    });
                 }
+            };
 
-			};
+        })();
 
-			var deleteTodoView   = function(e) {
+        // Todolist Module
+        var TodoList = (function(Pubsub) {
+            var idCounter = 0;
+            var list = [];
 
-				var article = todoList.querySelector('#' + e.detail);
-				article.className = 'todo slideLeft';
-				
-				// for the sake of animation after deleting
-				setTimeout(function(){
-					article.outerHTML = '';
-				}, 200);
-			};
+            // Private `Todo` Class
+            var Todo = function(task, id) {
+                this.id = id;
+                this.task = task;
+                this.done = false;
+            };
 
-			var getAllTodosView = function() {
+            return {
 
-				todoList.innerHTML = '';
-				TodoList.getAllTodos().forEach(function(todo) {
-					addTodoView(todo);
-				});	
-			};
+                addTodo: function(task) {
 
-			var toggleTodo  = function(e, flag) {
+                    var newTodo = new Todo(task, 'TODO' + idCounter);
 
-				var article = e.target.parentElement;
-				var p       = article.querySelector('p');
-				var i       = article.querySelectorAll('i');
-				var input   = article.querySelector('input');
+                    idCounter++;
+                    list.push(newTodo);
 
-				if(!flag) {	// show the input to edit todo
+                    Pubsub.publish('/model/todo/add', newTodo);
+                },
+                editTodo: function(updatedTodo) {
 
-					p.style.display = 'none';
-					i[0].style.display = 'none';
-					i[1].style.display = 'none';
-					input.style.display = 'block';					
+                    list.some(function(todo, index) {
 
-				} else {	// hide the input
+                        if (todo.id === updatedTodo.id) { // break loop here
 
-					p.style.display = 'block';
-					i[0].style.display = 'block';
-					i[1].style.display = 'block';
-					input.style.display = 'none';
+                            list[index] = updatedTodo;
+                            return true;
 
-				}
-				
-			};
+                        }
 
-			// listening to model changes here
-			todoContainer.addEventListener('ADD', addTodoView, false);
-			todoContainer.addEventListener('EDIT', editTodoView, false);
-			todoContainer.addEventListener('DELETE', deleteTodoView, false);
+                    });
 
-			// listening to delete and check icon here
-			todoList.addEventListener('click', function(e) {
-			
-				var classname = e.target.className;
+                    Pubsub.publish('/model/todo/edit', updatedTodo);
+                },
+                deleteTodo: function(id) {
 
-				if(classname.indexOf('circle') !== -1) {
+                    list = list.filter(function(todo) {
 
-					TodoList.editTodo({
-						id: e.target.parentElement.id,
-						task: e.target.nextSibling.textContent,
-						done: classname === 'fa fa-circle-o'
-					});					
+                        return todo.id !== id;
 
-				} else if(classname.indexOf('trash') !== -1) {
+                    });
 
-					TodoList.deleteTodo(e.target.parentElement.id);
-				}
-			});
+                    Pubsub.publish('/model/todo/delete', id);
+                },
+                getAllTodos: function() {
 
-			todoList.addEventListener('dblclick', toggleTodo, false);
+                    return list.slice(); // return the copied array
 
-			form.addEventListener('submit', function(e) {
-				
-				var input = e.target.querySelector('input');
-				e.preventDefault();
-				input.value = input.value.trim();	// trim the input
-				input.value && TodoList.addTodo(input.value);
-				input.value = '';	// clear the input area
+                }
+            };
 
-			}, false);
+        })(Pubsub);
 
-			// show all the todos
-			getAllTodosView();
+        // View Module
+        var View = (function(Pubsub) {
 
-		})(document);
+            var todoContainer = document.querySelector('.todoContainer');
+            var todoList = document.querySelector('#todoList');
+            var form = document.querySelector('form');
+
+            // private functions
+
+            var toggleTodo = function(e, flag) {
+
+                var article = e.target.parentElement;
+                var p = article.querySelector('p');
+                var i = article.querySelectorAll('i');
+                var input = article.querySelector('input');
+
+                if (!flag) { // show the input to edit todo
+
+                    p.style.display = 'none';
+                    i[0].style.display = 'none';
+                    i[1].style.display = 'none';
+                    input.style.display = 'block';
+
+                } else { // hide the input
+
+                    p.style.display = 'block';
+                    i[0].style.display = 'block';
+                    i[1].style.display = 'block';
+                    input.style.display = 'none';
+
+                }
+            };
+
+            // public functions
+            return {
+
+                initHandlers: function() {
+
+                    // listening to model changes here
+                    Pubsub.subscribe('/model/todo/add', this.addTodoView);
+                    Pubsub.subscribe('/model/todo/edit', this.editTodoView);
+                    Pubsub.subscribe('/model/todo/delete', this.deleteTodoView);
+
+                    // listening to delete and check icon here
+                    todoList.addEventListener('click', this.deleteCheckHandler, false);
+                    todoList.addEventListener('dblclick', toggleTodo, false);
+                    form.addEventListener('submit', this.formSubmitHandler, false);
+
+                },
+                addTodoView: function(todo) {
+
+                    var todoHTML = '<article class="todo slideDown" id="' + todo.id + '">' +
+                        '<i class="fa fa-circle-o"></i>' +
+                        '<p>' + todo.task + '</p>' +
+                        '<i class="fa fa-trash-o"></i>' +
+                        '<input type="text" value="' + todo.task + '"/>' +
+                        '</article>';
+
+                    var inputBlurHandler = function(event) {
+
+                        toggleTodo(event, true);
+
+                        Pubsub.publish('/view/todo/edit', {
+                            id: todo.id,
+                            task: event.target.value,
+                            done: false
+                        });
+
+                    };
+
+                    // append newtodo as well as retaining the 
+                    // event handlers: cannot use innerHTML here        
+                    todoList.insertAdjacentHTML('beforeend', todoHTML);
+
+                    // set event handlers here for todo
+                    todoList.querySelector('#' + todo.id + ' input')
+                        .addEventListener('blur', inputBlurHandler, false);
+
+                },
+                editTodoView: function(todo) {
+
+                    var p = todoList.querySelector('#' + todo.id + ' p');
+                    var i = todoList.querySelector('#' + todo.id + ' i');
+
+                    p.innerHTML = todo.task;
+
+                    if (todo.done) {
+                        i.className = 'fa fa-check-circle-o';
+                        p.style.textDecoration = 'line-through';
+                    } else {
+                        i.className = 'fa fa-circle-o';
+                        p.style.textDecoration = 'none';
+                    }
+
+                },
+                deleteTodoView: function(todo) {
+
+                    var article = todoList.querySelector('#' + todo);
+                    article.className = 'todo slideLeft';
+
+                    // for the sake of animation after deleting
+                    setTimeout(function() {
+                        article.outerHTML = '';
+                    }, 200);
+                },
+                getAllTodosView: function(model) {
+
+                    todoList.innerHTML = '';
+
+                    model.getAllTodos().forEach(function(todo) {
+                        addTodoView(todo);
+                    });
+                },
+                formSubmitHandler: function(e) {
+
+                    var input = e.target.querySelector('input');
+                    e.preventDefault();
+                    input.value = input.value.trim(); // trim the input
+                    input.value && Pubsub.publish('/view/todo/add', input.value);
+                    input.value = ''; // clear the input area
+
+                },
+                deleteCheckHandler: function(e) {
+
+                    var classname = e.target.className;
+
+                    if (classname.indexOf('circle') !== -1) {
+
+                        Pubsub.publish('/view/todo/edit', {
+                            id: e.target.parentElement.id,
+                            task: e.target.nextSibling.textContent,
+                            done: classname === 'fa fa-circle-o'
+                        });
+
+                    } else if (classname.indexOf('trash') !== -1) {
+
+                        Pubsub.publish('/view/todo/delete', e.target.parentElement.id);
+                    }
+                }
+            };
+
+        })(Pubsub);
+
+        var Controller = (function(view, model, Pubsub) {
+
+            return {
+                init: function() {
+
+                    view.initHandlers(); // init event handlers on DOM elements
+                    this.initHandlers(); // listeners on controller 
+                    view.getAllTodosView(model); // show all the todos
+                },
+                initHandlers: function() {
+
+                    Pubsub.subscribe('/view/todo/edit', model.editTodo);
+                    Pubsub.subscribe('/view/todo/add', model.addTodo);
+                    Pubsub.subscribe('/view/todo/delete', model.deleteTodo);
+
+                }
+            }
+
+        })(View, TodoList, Pubsub);
+
+        // Starting point of the entire application
+        Controller.init();
+
+    })(document);
 	</script>
 </body>
 </html>
