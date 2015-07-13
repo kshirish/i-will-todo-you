@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Vanilla js</title>
+	<link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+	<style>
+		body {
+			font-family: 'Lato', sans-serif;
+			background-color: #15A363;
+			overflow: hidden;
+		}
+		.slideLeft{
+			animation-name: slideLeft;
+			-webkit-animation-name: slideLeft;	
+
+			animation-duration: 0.2s;	
+			-webkit-animation-duration: 0.2s;
+
+			animation-timing-function: ease-in-out;	
+			-webkit-animation-timing-function: ease-in-out;		
+			
+			animation-direction: alternate-reverse;
+			-webkit-animation-direction: alternate-reverse;
+			visibility: visible !important;	
+		}
+		@keyframes slideLeft {
+			0% {
+				transform: translateX(150%);
+			}			
+			100% {
+				transform: translateX(0%);
+			}
+		}
+		@-webkit-keyframes slideLeft {
+			0% {
+				-webkit-transform: translateX(150%);
+			}			
+			100% {
+				-webkit-transform: translateX(0%);
+			}
+		}
+		.slideDown{
+			animation-name: slideDown;
+			-webkit-animation-name: slideDown;	
+
+			animation-duration: 1s;	
+			-webkit-animation-duration: 1s;
+
+			animation-timing-function: ease;	
+			-webkit-animation-timing-function: ease;	
+
+			visibility: visible !important;						
+		}
+
+		@keyframes slideDown {
+			0% {
+				transform: translateY(-100%);
+			}
+			50%{
+				transform: translateY(8%);
+			}
+			65%{
+				transform: translateY(-4%);
+			}
+			80%{
+				transform: translateY(4%);
+			}
+			95%{
+				transform: translateY(-2%);
+			}			
+			100% {
+				transform: translateY(0%);
+			}		
+		}
+
+		@-webkit-keyframes slideDown {
+			0% {
+				-webkit-transform: translateY(-100%);
+			}
+			50%{
+				-webkit-transform: translateY(8%);
+			}
+			65%{
+				-webkit-transform: translateY(-4%);
+			}
+			80%{
+				-webkit-transform: translateY(4%);
+			}
+			95%{
+				-webkit-transform: translateY(-2%);
+			}			
+			100% {
+				-webkit-transform: translateY(0%);
+			}	
+		}
+		.container {
+			width: 100%;
+			margin: 0 auto;
+			background-color: #fff;
+		}
+		header, footer {
+			text-align: center;
+			padding: 20px 0;
+		}
+		input[type="text"] {
+			line-height: 1.8em;
+			font-size: 24px;
+			width: 100%;
+			box-sizing: border-box;
+			border: 1px solid #ddd;
+			padding: 5px 50px;
+		}
+		input[type="text"]:focus {
+			outline: none;
+			border: 1px solid #B5EFD5;
+			box-sizing: border-box;			
+		}
+		.todo {
+			border: 1px solid #ddd;
+			position: relative;
+		}
+		.todo p {
+			font-size: 24px;
+			padding: 10px 50px;
+			margin: 0;
+		}
+		.todo input[type="text"] {
+			display: none;
+		}
+		.fa.fa-circle-o, .fa.fa-check-circle-o {
+			top: 10px;
+			left: 10px;
+			font-size: 28px;
+			position: absolute;
+		}
+		.fa.fa-trash-o {
+			top: 10px;
+			right: 10px;
+			font-size: 28px;
+			position: absolute;			
+		}
+		article {
+			cursor: pointer;
+		}
+		@media (min-width: 700px) {
+			.container {
+				width: 80%;
+			}
+		}
+		@media (min-width: 1000px) {
+			.container {
+				width: 65%;
+			}
+		}
+		@media (min-width: 1200px) {
+			.container {
+				width: 50%;
+			}
+		}
+	</style>
+</head>
+<body>
+	
+	<section class="container">
+		<header>
+			<h1>ECMA6</h1>
+		</header>
+
+		<section class="todoContainer">
+			<form>
+				<input type="text" placeholder="Write todo here" autofocus required/>
+			</form>
+
+			<section id="todoList">
+			</section>
+		</section>
+
+		<footer>
+			Developed by kshirish
+		</footer>
+	</section>
+	
+    <script src="node_modules/babel/node_modules/babel-core/browser.js"></script>
+	<script>
+/*	(function(document) {
+
+        'use strict';
+
+        // Pubsub Module
+        var Pubsub = (function() {
+
+            var pubsubModel = {};
+
+            return {
+                subscribe: function(event, handler) {
+
+                    pubsubModel[event] = pubsubModel[event] || [];
+                    pubsubModel[event].push(handler);
+
+                },
+                unsubscribe: function(event, handler) {
+
+                    var handlerString = handler.toString();
+                    pubsubModel[event] = pubsubModel[event].filter(function(h) {
+
+                        return h.toString() !== handlerString;
+                    });
+                },
+                publish: function(event, data) {
+
+                    pubsubModel[event].forEach(function(func) {
+                        func(data);
+                    });
+                }
+            };
+
+        })();
+
+        // Todolist Module
+        var TodoList = (function(Pubsub) {
+            var idCounter = 0;
+            var list = [];
+
+            // Private `Todo` Class
+            var Todo = function(task, id) {
+                this.id = id;
+                this.task = task;
+                this.done = false;
+            };
+
+            return {
+
+                addTodo: function(task) {
+
+                    var newTodo = new Todo(task, 'TODO' + idCounter);
+
+                    idCounter++;
+                    list.push(newTodo);
+
+                    Pubsub.publish('/model/todo/add', newTodo);
+                },
+                editTodo: function(updatedTodo) {
+
+                    list.some(function(todo, index) {
+
+                        if (todo.id === updatedTodo.id) { // break loop here
+
+                            list[index] = updatedTodo;
+                            return true;
+
+                        }
+
+                    });
+
+                    Pubsub.publish('/model/todo/edit', updatedTodo);
+                },
+                deleteTodo: function(id) {
+
+                    list = list.filter(function(todo) {
+
+                        return todo.id !== id;
+
+                    });
+
+                    Pubsub.publish('/model/todo/delete', id);
+                },
+                getAllTodos: function() {
+
+                    return list.slice(); // return the copied array
+
+                }
+            };
+
+        })(Pubsub);
+
+        // View Module
+        var View = (function(Pubsub) {
+
+            var todoContainer = document.querySelector('.todoContainer');
+            var todoList = document.querySelector('#todoList');
+            var form = document.querySelector('form');
+
+            // private functions
+
+            var toggleTodo = function(e, flag) {
+
+                var article = e.target.parentElement;
+                var p = article.querySelector('p');
+                var i = article.querySelectorAll('i');
+                var input = article.querySelector('input');
+
+                if (!flag) { // show the input to edit todo
+
+                    p.style.display = 'none';
+                    i[0].style.display = 'none';
+                    i[1].style.display = 'none';
+                    input.style.display = 'block';
+
+                } else { // hide the input
+
+                    p.style.display = 'block';
+                    i[0].style.display = 'block';
+                    i[1].style.display = 'block';
+                    input.style.display = 'none';
+
+                }
+            };
+
+            // public functions
+            return {
+
+                initHandlers: function() {
+
+                    // listening to model changes here
+                    Pubsub.subscribe('/model/todo/add', this.addTodoView);
+                    Pubsub.subscribe('/model/todo/edit', this.editTodoView);
+                    Pubsub.subscribe('/model/todo/delete', this.deleteTodoView);
+
+                    // listening to delete and check icon here
+                    todoList.addEventListener('click', this.deleteCheckHandler, false);
+                    todoList.addEventListener('dblclick', toggleTodo, false);
+                    form.addEventListener('submit', this.formSubmitHandler, false);
+
+                },
+                addTodoView: function(todo) {
+
+                    var todoHTML = '<article class="todo slideDown" id="' + todo.id + '">' +
+                        '<i class="fa fa-circle-o"></i>' +
+                        '<p>' + todo.task + '</p>' +
+                        '<i class="fa fa-trash-o"></i>' +
+                        '<input type="text" value="' + todo.task + '"/>' +
+                        '</article>';
+
+                    var inputBlurHandler = function(event) {
+
+                        toggleTodo(event, true);
+
+                        Pubsub.publish('/view/todo/edit', {
+                            id: todo.id,
+                            task: event.target.value,
+                            done: false
+                        });
+
+                    };
+
+                    // append newtodo as well as retaining the 
+                    // event handlers: cannot use innerHTML here        
+                    todoList.insertAdjacentHTML('beforeend', todoHTML);
+
+                    // set event handlers here for todo
+                    todoList.querySelector('#' + todo.id + ' input')
+                        .addEventListener('blur', inputBlurHandler, false);
+
+                },
+                editTodoView: function(todo) {
+
+                    var p = todoList.querySelector('#' + todo.id + ' p');
+                    var i = todoList.querySelector('#' + todo.id + ' i');
+
+                    p.innerHTML = todo.task;
+
+                    if (todo.done) {
+                        i.className = 'fa fa-check-circle-o';
+                        p.style.textDecoration = 'line-through';
+                    } else {
+                        i.className = 'fa fa-circle-o';
+                        p.style.textDecoration = 'none';
+                    }
+
+                },
+                deleteTodoView: function(todo) {
+
+                    var article = todoList.querySelector('#' + todo);
+                    article.className = 'todo slideLeft';
+
+                    // for the sake of animation after deleting
+                    setTimeout(function() {
+                        article.outerHTML = '';
+                    }, 200);
+                },
+                getAllTodosView: function(model) {
+
+                    todoList.innerHTML = '';
+
+                    model.getAllTodos().forEach(function(todo) {
+                        addTodoView(todo);
+                    });
+                },
+                formSubmitHandler: function(e) {
+
+                    var input = e.target.querySelector('input');
+                    e.preventDefault();
+                    input.value = input.value.trim(); // trim the input
+                    input.value && Pubsub.publish('/view/todo/add', input.value);
+                    input.value = ''; // clear the input area
+
+                },
+                deleteCheckHandler: function(e) {
+
+                    var classname = e.target.className;
+
+                    if (classname.indexOf('circle') !== -1) {
+
+                        Pubsub.publish('/view/todo/edit', {
+                            id: e.target.parentElement.id,
+                            task: e.target.nextSibling.textContent,
+                            done: classname === 'fa fa-circle-o'
+                        });
+
+                    } else if (classname.indexOf('trash') !== -1) {
+
+                        Pubsub.publish('/view/todo/delete', e.target.parentElement.id);
+                    }
+                }
+            };
+
+        })(Pubsub);
+
+        var Controller = (function(view, model, Pubsub) {
+
+            return {
+                init: function() {
+
+                    view.initHandlers(); // init event handlers on DOM elements
+                    this.initHandlers(); // listeners on controller 
+                    view.getAllTodosView(model); // show all the todos
+                },
+                initHandlers: function() {
+
+                    Pubsub.subscribe('/view/todo/edit', model.editTodo);
+                    Pubsub.subscribe('/view/todo/add', model.addTodo);
+                    Pubsub.subscribe('/view/todo/delete', model.deleteTodo);
+
+                }
+            }
+
+        })(View, TodoList, Pubsub);
+
+        // Starting point of the entire application
+        Controller.init();
+
+    })(document);*/
+	</script>
+    <script type="text/babel">
+    // put your ES6 code here ..
+    </script>
+</body>
+</html>
