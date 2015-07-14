@@ -237,20 +237,20 @@
 
         addTodo(task) {
 
-            let newTodo = new Todo(task, 'TODO' + this.idCounter);
+            let newTodo = new Todo(task, 'TODO' + privateCollection.get(this).idCounter;
 
-            this.idCounter++;
-            this.list.push(newTodo);
+            privateCollection.get(this).idCounter++;
+            privateCollection.get(this).list.push(newTodo);
 
             pubsub.publish('/model/todo/add', newTodo);
         }
 
         editTodo(updatedTodo) {
 
-            this.list.some((todo, index) => {
+            privateCollection.get(this).list.some((todo, index) => {
 
                 if (todo.id === updatedTodo.id) { // break loop here
-                    this.list[index] = updatedTodo;
+                    privateCollection.get(this).list[index] = updatedTodo;
                     return true;
                 }
             });
@@ -259,12 +259,12 @@
         }
 
         deleteTodo(id) {
-            this.list = this.list.filter(todo => todo.id !== id)
+            privateCollection.get(this).list = privateCollection.get(this).list.filter(todo => todo.id !== id)
             pubsub.publish('/model/todo/delete', id);
         })
 
         getAllTodos() {
-            return this.list.slice();
+            return privateCollection.get(this).list.slice();
         }
 
     }
@@ -311,9 +311,9 @@
             pubsub.subscribe('/model/todo/delete', this.deleteTodoView);
 
             // listening to delete and check icon here
-            todoList.addEventListener('click', this.deleteCheckHandler, false);
-            todoList.addEventListener('dblclick', toggleTodo, false);
-            form.addEventListener('submit', this.formSubmitHandler, false);
+            privateView.get(this).todoList.addEventListener('click', this.deleteCheckHandler, false);
+            privateView.get(this).todoList.addEventListener('dblclick', privateView.get(this).toggleTodo, false);
+            privateView.get(this).form.addEventListener('submit', this.formSubmitHandler, false);
 
         }
 
@@ -328,7 +328,7 @@
 
             let inputBlurHandler = function(event) {
 
-                toggleTodo(event, true);
+                privateView.get(this).toggleTodo(event, true);
 
                 pubsub.publish('/view/todo/edit', {
                     id: todo.id,
@@ -340,18 +340,18 @@
 
             // append newtodo as well as retaining the 
             // event handlers: cannot use innerHTML here        
-            todoList.insertAdjacentHTML('beforeend', todoHTML);
+            privateView.get(this).todoList.insertAdjacentHTML('beforeend', todoHTML);
 
             // set event handlers here for todo
-            todoList.querySelector('#' + todo.id + ' input')
+            privateView.get(this).todoList.querySelector('#' + todo.id + ' input')
                 .addEventListener('blur', inputBlurHandler, false);
 
         }
 
         editTodoView(todo) {
 
-            let p = todoList.querySelector('#' + todo.id + ' p');
-            let i = todoList.querySelector('#' + todo.id + ' i');
+            let p = privateView.get(this).todoList.querySelector('#' + todo.id + ' p');
+            let i = privateView.get(this).todoList.querySelector('#' + todo.id + ' i');
 
             p.innerHTML = todo.task;
 
@@ -367,7 +367,7 @@
 
         deleteTodoView(todo) {
 
-            let article = todoList.querySelector('#' + todo);
+            let article = privateView.get(this).todoList.querySelector('#' + todo);
             article.className = 'todo slideLeft';
 
             // for the sake of animation after deleting
@@ -378,7 +378,7 @@
 
         getAllTodosView(model) {
 
-            todoList.innerHTML = '';
+            privateView.get(this).todoList.innerHTML = '';
 
             model.getAllTodos().forEach(function(todo) {
                 this.addTodoView(todo);
