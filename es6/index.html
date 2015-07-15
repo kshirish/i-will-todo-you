@@ -181,7 +181,8 @@
         </footer>
     </section>
     
-    <script src="node_modules/babel/node_modules/babel-core/browser.js"></script>
+    <script src="node_modules/babel-core/browser.js"></script>
+
     <script type="text/babel">
 (function(document) {
 
@@ -194,14 +195,12 @@
             this.pubsubModel = {};
         }
 
-        static subscribe(event, handler) {
-
+        subscribe(event, handler) {
             this.pubsubModel[event] = this.pubsubModel[event] || [];
             this.pubsubModel[event].push(handler);
         }
 
-        static unsubscribe(event, handler) {
-
+        unsubscribe(event, handler) {
             let handlerString = handler.toString();
 
             this.pubsubModel[event] = this.pubsubModel[event].filter(function(h) {
@@ -209,8 +208,7 @@
             });
         }
 
-        static publish(event, data) {
-
+        publish(event, data) {
             this.pubsubModel[event].forEach(func => func(data));
         }
     }
@@ -237,7 +235,7 @@
 
         addTodo(task) {
 
-            let newTodo = new Todo(task, 'TODO' + privateCollection.get(this).idCounter;
+            let newTodo = new Todo(task, 'TODO' + privateCollection.get(this).idCounter);
 
             privateCollection.get(this).idCounter++;
             privateCollection.get(this).list.push(newTodo);
@@ -261,7 +259,7 @@
         deleteTodo(id) {
             privateCollection.get(this).list = privateCollection.get(this).list.filter(todo => todo.id !== id)
             pubsub.publish('/model/todo/delete', id);
-        })
+        }
 
         getAllTodos() {
             return privateCollection.get(this).list.slice();
@@ -306,9 +304,9 @@
         initHandlers() {
 
             // listening to model changes here
-            pubsub.subscribe('/model/todo/add', this.addTodoView);
-            pubsub.subscribe('/model/todo/edit', this.editTodoView);
-            pubsub.subscribe('/model/todo/delete', this.deleteTodoView);
+            pubsub.subscribe('/model/todo/add', this.addTodoView.bind(this));
+            pubsub.subscribe('/model/todo/edit', this.editTodoView.bind(this));
+            pubsub.subscribe('/model/todo/delete', this.deleteTodoView.bind(this));
 
             // listening to delete and check icon here
             privateView.get(this).todoList.addEventListener('click', this.deleteCheckHandler, false);
@@ -416,23 +414,25 @@
     }
 
     class Controller {
-        constructor(model, view) {
+        constructor(view, model) {
             this.model = model;
             this.view = view;
         }   
 
-        init(view, model) {
+        init() {
 
             this.view.initHandlers(); // init event handlers on DOM elements
             this.initHandlers(); // listeners on controller 
             this.view.getAllTodosView(this.model); // show all the todos
+
         }
 
         initHandlers() {
-
-            pubsub.subscribe('/view/todo/edit', this.model.editTodo);
-            pubsub.subscribe('/view/todo/add', this.model.addTodo);
-            pubsub.subscribe('/view/todo/delete', this.model.deleteTodo);
+            
+            pubsub.subscribe('/view/todo/edit', this.model.editTodo.bind(this.model)); 
+            pubsub.subscribe('/view/todo/add', this.model.addTodo.bind(this.model));
+            pubsub.subscribe('/view/todo/delete', this.model.deleteTodo.bind(this.model));
+            
         }
     
     }
@@ -447,6 +447,6 @@
     controller.init();
 
 })(document);
-    </script>
+</script>
 </body>
 </html>
