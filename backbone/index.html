@@ -189,6 +189,7 @@
 
         'use strict';
 
+        // Model
         var TodoModel = Backbone.Model.extend({
           defaults: {
             /* defaults here */
@@ -198,13 +199,14 @@
           }
         });
 
+        // Collection
         var TodoCollection = Backbone.Collection.extend({
 
+          model: TodoModel,
           initialize: function() {
             _.extend(this, Backbone.Events);
             this.idCounter = 0;
           },
-          model: TodoModel,
           addTodo: function(task) {
 
             this.idCounter = this.idCounter + 1;
@@ -216,13 +218,16 @@
           },
           editTodo: function(updatedTodo) {
 
+            // get the model
             var model = this.get(updatedTodo.id);
 
+            // update the model
             model.set({
               task: updatedTodo.task,
               done: updatedTodo.done
             });
 
+            // set model into collection
             this.set(model, {
               remove: false
             });
@@ -234,19 +239,20 @@
             }));
           },
           getAllTodos: function() {
-
-            return this.slice(); // return the copied array
+            // return the copied array
+            return this.slice();
           }
         });
 
+        // Form View
         var FormView = Backbone.View.extend({
-            initialize: function() {
-                // let it extend the `Events` behavior
-                _.extend(this, Backbone.Events);
-            },
             tagName: 'form',
             events: {
                 'submit': 'formSubmitHandler'
+            },
+            initialize: function() {
+                // extend `Events` behavior
+                _.extend(this, Backbone.Events);
             },
             formSubmitHandler: function(e) {
 
@@ -259,17 +265,20 @@
             }
         });
 
+        // List View
         var ListView = Backbone.View.extend({
-            initialize: function() {
-                // let it extend the `Events` behavior
-                _.extend(this, Backbone.Events);
-            },
+
             id: 'todoList',
             events: {
                 'click': 'deleteCheckHandler'
                 'dblclick': 'toggleTodo'
             },
-            listenToModel: function() {
+            initialize: function() {
+                // extend `Events` behavior
+                _.extend(this, Backbone.Events);
+                this.listenToCollection();
+            },
+            listenToCollection: function() {
 
                 // listening to model changes here
                 this.listenTo(todoCollection, 'change', function(latest, whole) {
@@ -287,7 +296,6 @@
                 this.listenTo(todoCollection, 'error', function(err) {
                     console.log('Error: ', err);
                 });
-
             },
             toggleTodo: function(e, flag) {
 
@@ -320,13 +328,14 @@
                     '<i class="fa fa-trash-o"></i>' +
                     '<input type="text" value="' + todo.task + '"/>' +
                     '</article>';
+
                 var self = this;
                     
                 var inputBlurHandler = function(event) {
 
                     self.toggleTodo(event, true);
 
-                    self.trigger('/view/todo/edit', {
+                    todoCollection.editTodo({
                         id: todo.id,
                         task: event.target.value,
                         done: false
@@ -381,7 +390,7 @@
 
                 if (classname.indexOf('circle') !== -1) {
 
-                    this.trigger('/view/todo/edit', {
+                    todoCollection.editTodo({
                         id: e.target.parentElement.id,
                         task: e.target.nextSibling.textContent,
                         done: classname === 'fa fa-circle-o'
@@ -389,30 +398,10 @@
 
                 } else if (classname.indexOf('trash') !== -1) {
 
-                    this.trigger('/view/todo/delete', e.target.parentElement.id);
+                    todoCollection.deleteTodo(e.target.parentElement.id);
                 }
             }
         });
-
-        var Controller = (function(view, model, Pubsub) {
-
-            return {
-                init: function() {
-
-                    view.initHandlers(); // init event handlers on DOM elements
-                    this.initHandlers(); // listeners on controller 
-                    view.getAllTodosView(model); // show all the todos
-                },
-                initHandlers: function() {
-
-                    this.on('/view/todo/edit', model.editTodo);
-                    this.on('/view/todo/add', model.addTodo);
-                    this.on('/view/todo/delete', model.deleteTodo);
-
-                }
-            }
-
-        })(View, TodoList, Pubsub);
 
         // Application runs after here
         var todoCollection = new TodoCollection();
