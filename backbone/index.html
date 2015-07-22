@@ -180,117 +180,116 @@
 			Developed by kshirish
 		</footer>
 	</section>
-	
+
+    <script src="http://backbonejs.org/backbone-min.js"></script>
+    <script src="http://underscorejs.org/underscore.js"></script>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 	<script>
-(function(document) {
+    (function(document) {
 
-    'use strict';
+        'use strict';
 
-    var TodoModel = Backbone.Model.extend({
-        defaults: {
+        var TodoModel = Backbone.Model.extend({
+          defaults: {
             /* defaults here */
-        },
-        initialize: function() {
+          },
+          initialize: function() {
             this.set('done', false);
-        }
-    });
+          }
+        });
 
-    var TodoCollection = Backbone.Collection.extend({
+        var TodoCollection = Backbone.Collection.extend({
 
-        initialize: function() {
-            // let it extend the `Events` behavior
+          initialize: function() {
             _.extend(this, Backbone.Events);
+            this.idCounter = 0;
+          },
+          model: TodoModel,
+          addTodo: function(task) {
 
-            this.set({
-                idCounter, 0
-            });
-        },
-        model: TodoModel,
-        addTodo: function(task) {
+            this.idCounter = this.idCounter + 1;
 
-            this.set('idCounter', this.get('idCounter') + 1);
-            this.add(new Todo({
-                'task': task,
-                'id': 'TODO' + idCounter
+            this.add(new TodoModel({
+              'task': task,
+              'id': 'TODO' + this.idCounter
             }));
+          },
+          editTodo: function(updatedTodo) {
 
-            //this.trigger('/model/todo/add', newTodo);
-        },
-        editTodo: function(updatedTodo) {
-
-            var model = this.get(updatedTodo.id)
+            var model = this.get(updatedTodo.id);
 
             model.set({
-                task: updatedTodo.task,
-                done: updatedTodo.done
+              task: updatedTodo.task,
+              done: updatedTodo.done
             });
 
             this.set(model, {
-                remove: false
-            })
+              remove: false
+            });
+          },
+          deleteTodo: function(id) {
 
-            // list.some(function(todo, index) {
-
-            //     if (todo.id === updatedTodo.id) { // break loop here
-
-            //         list[index] = updatedTodo;
-            //         return true;
-
-            //     }
-
-            // });
-
-            //this.trigger('/model/todo/edit', updatedTodo);
-        },
-        deleteTodo: function(id) {
-
-            this.remove(this.where({'id': id}));
-            // list = list.filter(function(todo) {
-
-            //     return todo.id !== id;
-
-            // });
-
-            //this.trigger('/model/todo/delete', id);
-        },
-        getAllTodos: function() {
+            this.remove(this.where({
+              'id': id
+            }));
+          },
+          getAllTodos: function() {
 
             return this.slice(); // return the copied array
-        }
-    });
+          }
+        });
 
-    var FormView = Backbone.View.extend({
-        initialize: function() {
-            // let it extend the `Events` behavior
-            _.extend(this, Backbone.Events);
-        },
-        tagName: 'form',
-        events: {
-            'submit': 'formSubmitHandler'
-        },
-        formSubmitHandler: function(e) {
+        var FormView = Backbone.View.extend({
+            initialize: function() {
+                // let it extend the `Events` behavior
+                _.extend(this, Backbone.Events);
+            },
+            tagName: 'form',
+            events: {
+                'submit': 'formSubmitHandler'
+            },
+            formSubmitHandler: function(e) {
 
-            var input = e.target.querySelector('input');
-            e.preventDefault();
-            input.value = input.value.trim(); // trim the input
-            input.value && todoCollection.addTodo(input.value);
-            input.value = ''; // clear the input area
+                var input = e.target.querySelector('input');
+                e.preventDefault();
+                input.value = input.value.trim(); // trim the input
+                input.value && todoCollection.addTodo(input.value);
+                input.value = ''; // clear the input area
 
-        }
-    });
+            }
+        });
 
-    var ListView = Backbone.View.extend({
-        initialize: function() {
-            // let it extend the `Events` behavior
-            _.extend(this, Backbone.Events);
-        },
-        listenToModel: function(m) {
-            this.listenTo(m, 'change', this.formSubmitHandler);
-        },
-        id: 'todoList',
-        initHandlers: function() {
+        var ListView = Backbone.View.extend({
+            initialize: function() {
+                // let it extend the `Events` behavior
+                _.extend(this, Backbone.Events);
+            },
+            id: 'todoList',
+            events: {
+                'click': 'deleteCheckHandler'
+                'dblclick': 'toggleTodo'
+            },
+            listenToModel: function() {
 
-            var toggleTodo = function(e, flag) {
+                // listening to model changes here
+                this.listenTo(todoCollection, 'change', function(latest, whole) {
+                    this.editTodoView(latest.attributes);
+                });
+
+                this.listenTo(todoCollection, 'remove', function(latest, whole) {
+                    this.deleteTodoView(latest.attributes);
+                });
+
+                this.listenTo(todoCollection, 'add', function(latest, whole) {
+                    this.addTodoView(latest.attributes);
+                });
+
+                this.listenTo(todoCollection, 'error', function(err) {
+                    console.log('Error: ', err);
+                });
+
+            },
+            toggleTodo: function(e, flag) {
 
                 var article = e.target.parentElement;
                 var p = article.querySelector('p');
@@ -312,127 +311,114 @@
                     input.style.display = 'none';
 
                 }
-            };
-
-            // listening to model changes here
-            this.on('/model/todo/add', this.addTodoView);
-            this.on('/model/todo/edit', this.editTodoView);
-            this.on('/model/todo/delete', this.deleteTodoView);
-
-            // listening to delete and check icon here
-            todoList.addEventListener('click', this.deleteCheckHandler, false);
-            todoList.addEventListener('dblclick', toggleTodo, false);
-            form.addEventListener('submit', this.formSubmitHandler, false);
-
-        },
-        addTodoView: function(todo) {
-
-            var todoHTML = '<article class="todo slideDown" id="' + todo.id + '">' +
-                '<i class="fa fa-circle-o"></i>' +
-                '<p>' + todo.task + '</p>' +
-                '<i class="fa fa-trash-o"></i>' +
-                '<input type="text" value="' + todo.task + '"/>' +
-                '</article>';
-
-            var inputBlurHandler = function(event) {
-
-                toggleTodo(event, true);
-
-                this.trigger('/view/todo/edit', {
-                    id: todo.id,
-                    task: event.target.value,
-                    done: false
-                });
-
-            };
-
-            // append newtodo as well as retaining the 
-            // event handlers: cannot use innerHTML here        
-            todoList.insertAdjacentHTML('beforeend', todoHTML);
-
-            // set event handlers here for todo
-            todoList.querySelector('#' + todo.id + ' input')
-                .addEventListener('blur', inputBlurHandler, false);
-
-        },
-        editTodoView: function(todo) {
-
-            var p = todoList.querySelector('#' + todo.id + ' p');
-            var i = todoList.querySelector('#' + todo.id + ' i');
-
-            p.innerHTML = todo.task;
-
-            if (todo.done) {
-                i.className = 'fa fa-check-circle-o';
-                p.style.textDecoration = 'line-through';
-            } else {
-                i.className = 'fa fa-circle-o';
-                p.style.textDecoration = 'none';
-            }
-
-        },
-        deleteTodoView: function(todo) {
-
-            var article = todoList.querySelector('#' + todo);
-            article.className = 'todo slideLeft';
-
-            // for the sake of animation after deleting
-            setTimeout(function() {
-                article.outerHTML = '';
-            }, 200);
-        },
-        getAllTodosView: function(model) {
-
-            todoList.innerHTML = '';
-
-            model.getAllTodos().forEach(function(todo) {
-                addTodoView(todo);
-            });
-        },
-        deleteCheckHandler: function(e) {
-
-            var classname = e.target.className;
-
-            if (classname.indexOf('circle') !== -1) {
-
-                this.trigger('/view/todo/edit', {
-                    id: e.target.parentElement.id,
-                    task: e.target.nextSibling.textContent,
-                    done: classname === 'fa fa-circle-o'
-                });
-
-            } else if (classname.indexOf('trash') !== -1) {
-
-                this.trigger('/view/todo/delete', e.target.parentElement.id);
-            }
-        }
-    });
-
-    var Controller = (function(view, model, Pubsub) {
-
-        return {
-            init: function() {
-
-                view.initHandlers(); // init event handlers on DOM elements
-                this.initHandlers(); // listeners on controller 
-                view.getAllTodosView(model); // show all the todos
             },
-            initHandlers: function() {
+            addTodoView: function(todo) {
 
-                this.on('/view/todo/edit', model.editTodo);
-                this.on('/view/todo/add', model.addTodo);
-                this.on('/view/todo/delete', model.deleteTodo);
+                var todoHTML = '<article class="todo slideDown" id="' + todo.id + '">' +
+                    '<i class="fa fa-circle-o"></i>' +
+                    '<p>' + todo.task + '</p>' +
+                    '<i class="fa fa-trash-o"></i>' +
+                    '<input type="text" value="' + todo.task + '"/>' +
+                    '</article>';
+                var self = this;
+                    
+                var inputBlurHandler = function(event) {
 
+                    self.toggleTodo(event, true);
+
+                    self.trigger('/view/todo/edit', {
+                        id: todo.id,
+                        task: event.target.value,
+                        done: false
+                    });
+
+                };
+
+                // append newtodo as well as retaining the 
+                // event handlers: cannot use innerHTML here        
+                this.$el.insertAdjacentHTML('beforeend', todoHTML);
+
+                // set event handlers here for todo
+                this.$el.querySelector('#' + todo.id + ' input')
+                    .addEventListener('blur', inputBlurHandler, false);
+            },
+            editTodoView: function(todo) {
+
+                var p = this.$el.querySelector('#' + todo.id + ' p');
+                var i = this.$el.querySelector('#' + todo.id + ' i');
+
+                p.innerHTML = todo.task;
+
+                if (todo.done) {
+                    i.className = 'fa fa-check-circle-o';
+                    p.style.textDecoration = 'line-through';
+                } else {
+                    i.className = 'fa fa-circle-o';
+                    p.style.textDecoration = 'none';
+                }
+            },
+            deleteTodoView: function(todoId) {
+
+                var article = this.$el.querySelector('#' + todoId);
+                article.className = 'todo slideLeft';
+
+                // for the sake of animation after deleting
+                setTimeout(function() {
+                    article.outerHTML = '';
+                }, 200);
+            },
+            getAllTodosView: function() {
+
+                this.$el.innerHTML = '';
+
+                todoCollection.getAllTodos().forEach(function(todo) {
+                    addTodoView(todo);
+                });
+            },
+            deleteCheckHandler: function(e) {
+
+                var classname = e.target.className;
+
+                if (classname.indexOf('circle') !== -1) {
+
+                    this.trigger('/view/todo/edit', {
+                        id: e.target.parentElement.id,
+                        task: e.target.nextSibling.textContent,
+                        done: classname === 'fa fa-circle-o'
+                    });
+
+                } else if (classname.indexOf('trash') !== -1) {
+
+                    this.trigger('/view/todo/delete', e.target.parentElement.id);
+                }
             }
-        }
+        });
 
-    })(View, TodoList, Pubsub);
+        var Controller = (function(view, model, Pubsub) {
 
-    // Application runs after here
-    var todoCollection = new TodoCollection();
+            return {
+                init: function() {
+
+                    view.initHandlers(); // init event handlers on DOM elements
+                    this.initHandlers(); // listeners on controller 
+                    view.getAllTodosView(model); // show all the todos
+                },
+                initHandlers: function() {
+
+                    this.on('/view/todo/edit', model.editTodo);
+                    this.on('/view/todo/add', model.addTodo);
+                    this.on('/view/todo/delete', model.deleteTodo);
+
+                }
+            }
+
+        })(View, TodoList, Pubsub);
+
+        // Application runs after here
+        var todoCollection = new TodoCollection();
 
 
-})(document);
+    })(document);
 	</script>
 </body>
 </html>
