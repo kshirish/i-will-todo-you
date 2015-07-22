@@ -182,7 +182,268 @@
 	</section>
 	
 	<script>
+(function(document) {
 
+    'use strict';
+
+    // Pubsub Module
+    var Pubsub = (function() {
+
+        var pubsubModel = {};
+
+        return {
+            subscribe: function(event, handler) {
+
+                pubsubModel[event] = pubsubModel[event] || [];
+                pubsubModel[event].push(handler);
+
+            },
+            unsubscribe: function(event, handler) {
+
+                var handlerString = handler.toString();
+                pubsubModel[event] = pubsubModel[event].filter(function(h) {
+
+                    return h.toString() !== handlerString;
+                });
+            },
+            publish: function(event, data) {
+
+                pubsubModel[event].forEach(function(func) {
+                    func(data);
+                });
+            }
+        };
+
+    })();
+
+    var Todo = Backbone.Model.extend({
+        defaults: {
+            /* defaults here */
+        },
+        initialize: function() {
+            this.set('done', false);
+        }
+    });
+
+    var TodoList = Backbone.Collection.extend({
+
+        model: Todo,
+        initialize: function() {
+            this.set({
+                idCounter, 0
+            });
+            this.set({
+                list, []
+            });
+        },
+        addTodo: function(task) {
+
+            var newTodo = new Todo({
+                'task': task,
+                'id': 'TODO' + idCounter
+            });
+
+            idCounter++;
+            list.push(newTodo);
+
+            Pubsub.publish('/model/todo/add', newTodo);
+        },
+        editTodo: function(updatedTodo) {
+
+            list.some(function(todo, index) {
+
+                if (todo.id === updatedTodo.id) { // break loop here
+
+                    list[index] = updatedTodo;
+                    return true;
+
+                }
+
+            });
+
+            Pubsub.publish('/model/todo/edit', updatedTodo);
+        },
+        deleteTodo: function(id) {
+
+            list = list.filter(function(todo) {
+
+                return todo.id !== id;
+
+            });
+
+            Pubsub.publish('/model/todo/delete', id);
+        },
+        getAllTodos: function() {
+
+            return list.slice(); // return the copied array
+
+        }
+
+    });
+
+
+    var FormView = Backbone.View.extend({
+        tagName: 'form',
+        events: {
+            
+        }
+    });
+
+    var ListView = Backbone.View.extend({
+        id: 'todoList',
+        initHandlers: function() {
+
+            var toggleTodo = function(e, flag) {
+
+                var article = e.target.parentElement;
+                var p = article.querySelector('p');
+                var i = article.querySelectorAll('i');
+                var input = article.querySelector('input');
+
+                if (!flag) { // show the input to edit todo
+
+                    p.style.display = 'none';
+                    i[0].style.display = 'none';
+                    i[1].style.display = 'none';
+                    input.style.display = 'block';
+
+                } else { // hide the input
+
+                    p.style.display = 'block';
+                    i[0].style.display = 'block';
+                    i[1].style.display = 'block';
+                    input.style.display = 'none';
+
+                }
+            };
+
+            // listening to model changes here
+            Pubsub.subscribe('/model/todo/add', this.addTodoView);
+            Pubsub.subscribe('/model/todo/edit', this.editTodoView);
+            Pubsub.subscribe('/model/todo/delete', this.deleteTodoView);
+
+            // listening to delete and check icon here
+            todoList.addEventListener('click', this.deleteCheckHandler, false);
+            todoList.addEventListener('dblclick', toggleTodo, false);
+            form.addEventListener('submit', this.formSubmitHandler, false);
+
+        },
+        addTodoView: function(todo) {
+
+            var todoHTML = '<article class="todo slideDown" id="' + todo.id + '">' +
+                '<i class="fa fa-circle-o"></i>' +
+                '<p>' + todo.task + '</p>' +
+                '<i class="fa fa-trash-o"></i>' +
+                '<input type="text" value="' + todo.task + '"/>' +
+                '</article>';
+
+            var inputBlurHandler = function(event) {
+
+                toggleTodo(event, true);
+
+                Pubsub.publish('/view/todo/edit', {
+                    id: todo.id,
+                    task: event.target.value,
+                    done: false
+                });
+
+            };
+
+            // append newtodo as well as retaining the 
+            // event handlers: cannot use innerHTML here        
+            todoList.insertAdjacentHTML('beforeend', todoHTML);
+
+            // set event handlers here for todo
+            todoList.querySelector('#' + todo.id + ' input')
+                .addEventListener('blur', inputBlurHandler, false);
+
+        },
+        editTodoView: function(todo) {
+
+            var p = todoList.querySelector('#' + todo.id + ' p');
+            var i = todoList.querySelector('#' + todo.id + ' i');
+
+            p.innerHTML = todo.task;
+
+            if (todo.done) {
+                i.className = 'fa fa-check-circle-o';
+                p.style.textDecoration = 'line-through';
+            } else {
+                i.className = 'fa fa-circle-o';
+                p.style.textDecoration = 'none';
+            }
+
+        },
+        deleteTodoView: function(todo) {
+
+            var article = todoList.querySelector('#' + todo);
+            article.className = 'todo slideLeft';
+
+            // for the sake of animation after deleting
+            setTimeout(function() {
+                article.outerHTML = '';
+            }, 200);
+        },
+        getAllTodosView: function(model) {
+
+            todoList.innerHTML = '';
+
+            model.getAllTodos().forEach(function(todo) {
+                addTodoView(todo);
+            });
+        },
+        formSubmitHandler: function(e) {
+
+            var input = e.target.querySelector('input');
+            e.preventDefault();
+            input.value = input.value.trim(); // trim the input
+            input.value && Pubsub.publish('/view/todo/add', input.value);
+            input.value = ''; // clear the input area
+
+        },
+        deleteCheckHandler: function(e) {
+
+            var classname = e.target.className;
+
+            if (classname.indexOf('circle') !== -1) {
+
+                Pubsub.publish('/view/todo/edit', {
+                    id: e.target.parentElement.id,
+                    task: e.target.nextSibling.textContent,
+                    done: classname === 'fa fa-circle-o'
+                });
+
+            } else if (classname.indexOf('trash') !== -1) {
+
+                Pubsub.publish('/view/todo/delete', e.target.parentElement.id);
+            }
+        }
+    });
+
+    var Controller = (function(view, model, Pubsub) {
+
+        return {
+            init: function() {
+
+                view.initHandlers(); // init event handlers on DOM elements
+                this.initHandlers(); // listeners on controller 
+                view.getAllTodosView(model); // show all the todos
+            },
+            initHandlers: function() {
+
+                Pubsub.subscribe('/view/todo/edit', model.editTodo);
+                Pubsub.subscribe('/view/todo/add', model.addTodo);
+                Pubsub.subscribe('/view/todo/delete', model.deleteTodo);
+
+            }
+        }
+
+    })(View, TodoList, Pubsub);
+
+    // Starting point of the entire application
+    Controller.init();
+
+})(document);
 	</script>
 </body>
 </html>
