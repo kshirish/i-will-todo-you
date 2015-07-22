@@ -186,37 +186,7 @@
 
     'use strict';
 
-    // Pubsub Module
-    var Pubsub = (function() {
-
-        var pubsubModel = {};
-
-        return {
-            subscribe: function(event, handler) {
-
-                pubsubModel[event] = pubsubModel[event] || [];
-                pubsubModel[event].push(handler);
-
-            },
-            unsubscribe: function(event, handler) {
-
-                var handlerString = handler.toString();
-                pubsubModel[event] = pubsubModel[event].filter(function(h) {
-
-                    return h.toString() !== handlerString;
-                });
-            },
-            publish: function(event, data) {
-
-                pubsubModel[event].forEach(function(func) {
-                    func(data);
-                });
-            }
-        };
-
-    })();
-
-    var Todo = Backbone.Model.extend({
+    var TodoModel = Backbone.Model.extend({
         defaults: {
             /* defaults here */
         },
@@ -225,71 +195,98 @@
         }
     });
 
-    var TodoList = Backbone.Collection.extend({
+    var TodoCollection = Backbone.Collection.extend({
 
-        model: Todo,
         initialize: function() {
+            // let it extend the `Events` behavior
+            _.extend(this, Backbone.Events);
+
             this.set({
                 idCounter, 0
             });
-            this.set({
-                list, []
-            });
         },
+        model: TodoModel,
         addTodo: function(task) {
 
-            var newTodo = new Todo({
+            this.set('idCounter', this.get('idCounter') + 1);
+            this.add(new Todo({
                 'task': task,
                 'id': 'TODO' + idCounter
-            });
+            }));
 
-            idCounter++;
-            list.push(newTodo);
-
-            Pubsub.publish('/model/todo/add', newTodo);
+            //this.trigger('/model/todo/add', newTodo);
         },
         editTodo: function(updatedTodo) {
 
-            list.some(function(todo, index) {
+            var model = this.get(updatedTodo.id)
 
-                if (todo.id === updatedTodo.id) { // break loop here
-
-                    list[index] = updatedTodo;
-                    return true;
-
-                }
-
+            model.set({
+                task: updatedTodo.task,
+                done: updatedTodo.done
             });
 
-            Pubsub.publish('/model/todo/edit', updatedTodo);
+            this.set(model, {
+                remove: false
+            })
+
+            // list.some(function(todo, index) {
+
+            //     if (todo.id === updatedTodo.id) { // break loop here
+
+            //         list[index] = updatedTodo;
+            //         return true;
+
+            //     }
+
+            // });
+
+            //this.trigger('/model/todo/edit', updatedTodo);
         },
         deleteTodo: function(id) {
 
-            list = list.filter(function(todo) {
+            this.remove(this.where({'id': id}));
+            // list = list.filter(function(todo) {
 
-                return todo.id !== id;
+            //     return todo.id !== id;
 
-            });
+            // });
 
-            Pubsub.publish('/model/todo/delete', id);
+            //this.trigger('/model/todo/delete', id);
         },
         getAllTodos: function() {
 
-            return list.slice(); // return the copied array
-
+            return this.slice(); // return the copied array
         }
-
     });
 
-
     var FormView = Backbone.View.extend({
+        initialize: function() {
+            // let it extend the `Events` behavior
+            _.extend(this, Backbone.Events);
+        },
         tagName: 'form',
         events: {
-            
+            'submit': 'formSubmitHandler'
+        },
+        formSubmitHandler: function(e) {
+
+            var input = e.target.querySelector('input');
+            e.preventDefault();
+            input.value = input.value.trim(); // trim the input
+            input.value && todoCollection.addTodo(input.value);
+            input.value = ''; // clear the input area
+
         }
     });
 
     var ListView = Backbone.View.extend({
+        initialize: function() {
+            // let it extend the `Events` behavior
+            _.extend(this, Backbone.Events);
+        },
+        listenToModel: function(m) {
+            this.listenTo(m, 'change', this.formSubmitHandler);
+        },
         id: 'todoList',
         initHandlers: function() {
 
@@ -318,9 +315,9 @@
             };
 
             // listening to model changes here
-            Pubsub.subscribe('/model/todo/add', this.addTodoView);
-            Pubsub.subscribe('/model/todo/edit', this.editTodoView);
-            Pubsub.subscribe('/model/todo/delete', this.deleteTodoView);
+            this.on('/model/todo/add', this.addTodoView);
+            this.on('/model/todo/edit', this.editTodoView);
+            this.on('/model/todo/delete', this.deleteTodoView);
 
             // listening to delete and check icon here
             todoList.addEventListener('click', this.deleteCheckHandler, false);
@@ -341,7 +338,7 @@
 
                 toggleTodo(event, true);
 
-                Pubsub.publish('/view/todo/edit', {
+                this.trigger('/view/todo/edit', {
                     id: todo.id,
                     task: event.target.value,
                     done: false
@@ -392,22 +389,13 @@
                 addTodoView(todo);
             });
         },
-        formSubmitHandler: function(e) {
-
-            var input = e.target.querySelector('input');
-            e.preventDefault();
-            input.value = input.value.trim(); // trim the input
-            input.value && Pubsub.publish('/view/todo/add', input.value);
-            input.value = ''; // clear the input area
-
-        },
         deleteCheckHandler: function(e) {
 
             var classname = e.target.className;
 
             if (classname.indexOf('circle') !== -1) {
 
-                Pubsub.publish('/view/todo/edit', {
+                this.trigger('/view/todo/edit', {
                     id: e.target.parentElement.id,
                     task: e.target.nextSibling.textContent,
                     done: classname === 'fa fa-circle-o'
@@ -415,7 +403,7 @@
 
             } else if (classname.indexOf('trash') !== -1) {
 
-                Pubsub.publish('/view/todo/delete', e.target.parentElement.id);
+                this.trigger('/view/todo/delete', e.target.parentElement.id);
             }
         }
     });
@@ -431,17 +419,18 @@
             },
             initHandlers: function() {
 
-                Pubsub.subscribe('/view/todo/edit', model.editTodo);
-                Pubsub.subscribe('/view/todo/add', model.addTodo);
-                Pubsub.subscribe('/view/todo/delete', model.deleteTodo);
+                this.on('/view/todo/edit', model.editTodo);
+                this.on('/view/todo/add', model.addTodo);
+                this.on('/view/todo/delete', model.deleteTodo);
 
             }
         }
 
     })(View, TodoList, Pubsub);
 
-    // Starting point of the entire application
-    Controller.init();
+    // Application runs after here
+    var todoCollection = new TodoCollection();
+
 
 })(document);
 	</script>
