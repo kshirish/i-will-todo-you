@@ -180,12 +180,21 @@
 			Developed by kshirish
 		</footer>
 	</section>
-
-    <script src="http://backbonejs.org/backbone-min.js"></script>
-    <script src="http://underscorejs.org/underscore.js"></script>
-	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    
+    <script type="text/template" id="todo-template">
+        <article class="todo slideDown" id="<%=id%>">
+            <i class="fa fa-circle-o"></i>
+            <p><%=task%></p>
+            <i class="fa fa-trash-o"></i>
+            <input type="text" value="<%=task%>"/>
+        </article>
+    </script>
+    <script src="js/jquery.js"></script>
+    <script src="js/underscore.js"></script>
+    <script src="js/backbone.js"></script>
+	
 	<script>
-    (function(document) {
+    // (function(document) {
 
         'use strict';
 
@@ -246,7 +255,7 @@
 
         // Form View
         var FormView = Backbone.View.extend({
-            tagName: 'form',
+            el: 'form',
             events: {
                 'submit': 'formSubmitHandler'
             },
@@ -256,11 +265,13 @@
             },
             formSubmitHandler: function(e) {
 
-                var input = e.target.querySelector('input');
+                var input = $('input', e.target);
                 e.preventDefault();
-                input.value = input.value.trim(); // trim the input
-                input.value && todoCollection.addTodo(input.value);
-                input.value = ''; // clear the input area
+                input.val( input.val().trim() ); // trim the input 
+                if(input.val()) {
+                    todoCollection.addTodo(input.val());    
+                } 
+                input.val(''); // clear the input area
 
             }
         });
@@ -268,10 +279,12 @@
         // List View
         var ListView = Backbone.View.extend({
 
-            id: 'todoList',
+            el: '#todoList',
             events: {
-                'click': 'deleteCheckHandler'
-                'dblclick': 'toggleTodo'
+                'blur input': 'inputBlurHandler',
+                'click .fa.fa-trash-o': 'deleteHandler',
+                'click .fa.fa-circle-o': 'checkHandler',
+                'click .fa.fa-check-circle-o': 'checkHandler'
             },
             initialize: function() {
                 // extend `Events` behavior
@@ -281,6 +294,10 @@
             listenToCollection: function() {
 
                 // listening to model changes here
+                this.listenTo(todoCollection, 'add', function(latest, whole) {
+                    this.addTodoView(latest.attributes);
+                });
+                
                 this.listenTo(todoCollection, 'change', function(latest, whole) {
                     this.editTodoView(latest.attributes);
                 });
@@ -289,13 +306,6 @@
                     this.deleteTodoView(latest.attributes);
                 });
 
-                this.listenTo(todoCollection, 'add', function(latest, whole) {
-                    this.addTodoView(latest.attributes);
-                });
-
-                this.listenTo(todoCollection, 'error', function(err) {
-                    console.log('Error: ', err);
-                });
             },
             toggleTodo: function(e, flag) {
 
@@ -320,36 +330,15 @@
 
                 }
             },
-            addTodoView: function(todo) {
+            inputBlurHandler: function(event) {
 
-                var todoHTML = '<article class="todo slideDown" id="' + todo.id + '">' +
-                    '<i class="fa fa-circle-o"></i>' +
-                    '<p>' + todo.task + '</p>' +
-                    '<i class="fa fa-trash-o"></i>' +
-                    '<input type="text" value="' + todo.task + '"/>' +
-                    '</article>';
+                this.toggleTodo(event, true);
 
-                var self = this;
-                    
-                var inputBlurHandler = function(event) {
-
-                    self.toggleTodo(event, true);
-
-                    todoCollection.editTodo({
-                        id: todo.id,
-                        task: event.target.value,
-                        done: false
-                    });
-
-                };
-
-                // append newtodo as well as retaining the 
-                // event handlers: cannot use innerHTML here        
-                this.$el.insertAdjacentHTML('beforeend', todoHTML);
-
-                // set event handlers here for todo
-                this.$el.querySelector('#' + todo.id + ' input')
-                    .addEventListener('blur', inputBlurHandler, false);
+                todoCollection.editTodo({
+                    id: todo.id,
+                    task: event.target.value,
+                    done: false
+                });
             },
             editTodoView: function(todo) {
 
@@ -376,38 +365,57 @@
                     article.outerHTML = '';
                 }, 200);
             },
-            getAllTodosView: function() {
-
-                this.$el.innerHTML = '';
-
-                todoCollection.getAllTodos().forEach(function(todo) {
-                    addTodoView(todo);
-                });
+            deleteHandler: function(e) {
+                debugger;
+                todoCollection.deleteTodo(e.target.parentElement.id);
             },
-            deleteCheckHandler: function(e) {
+            checkHandler: function(e) {
+                
+                var targetEl = $(e.target);
 
-                var classname = e.target.className;
-
-                if (classname.indexOf('circle') !== -1) {
+                if(targetEl.hasClass('fa-circle-o')) {
 
                     todoCollection.editTodo({
                         id: e.target.parentElement.id,
                         task: e.target.nextSibling.textContent,
-                        done: classname === 'fa fa-circle-o'
+                        done: true
                     });
 
-                } else if (classname.indexOf('trash') !== -1) {
+                } else if(targetEl.hasClass('fa-circle-check-o')) {
 
-                    todoCollection.deleteTodo(e.target.parentElement.id);
+                    todoCollection.editTodo({
+                        id: e.target.parentElement.id,
+                        task: e.target.nextSibling.textContent,
+                        done: false
+                    });
+
+                } else if(targetEl.hasClass('fa-trash-o')) {
+
                 }
+
+            },
+            addTodoView: function(todo) {
+                
+                var template = _.template( $("#todo-template").html() );
+                this.$el.append( template( todo ) );
+            },
+            getAllTodosView: function() {
+
+                var self = this;
+                this.$el.html('');
+
+                todoCollection.getAllTodos().forEach(function(todo) {
+                    self.addTodoView(todo);
+                });
             }
         });
 
         // Application runs after here
         var todoCollection = new TodoCollection();
+        new FormView();
+        new ListView();
 
-
-    })(document);
+    // })(document);
 	</script>
 </body>
 </html>
