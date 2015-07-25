@@ -5,7 +5,7 @@
 		<link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
 	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 	<style>
-		[ng\:cloak], [ng-cloak], .ng-cloak {
+		[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
 		  display: none !important;
 		}
 		body {
@@ -119,6 +119,9 @@
 			border: 1px solid #B5EFD5;
 			box-sizing: border-box;			
 		}
+		.strike {
+			text-decoration: line-through;
+		}
 		.hide {
 			display: none;
 		}
@@ -177,13 +180,14 @@
 				<input type="text" placeholder="Write todo here" autofocus required ng-model="newtask"/>
 			</form>
 
-			<section id="todoList">
+			<!-- hide the initial curly braces -->
+			<section id="todoList" ng-cloak>
 			    <article class="todo slideDown" ng-repeat="todo in todos" id="{{todo.id}}">
-		            <i class="fa fa-circle-o" ng-click="toggleTodo(todo)" ng-class="{hide: (editing || todo.done)}"></i>
-		            <i class="fa fa-check-circle-o" ng-click="toggleTodo(todo)" ng-class="{hide: (editing || !todo.done)}"></i>
-		            <p ng-class="{hide: editing}" ng-dblclick="editing = true">{{todo.task}}</p>
-		            <i class="fa fa-trash-o" ng-click="deleteTodo(todo.id)" ng-class="{hide: editing}"></i>
-		            <input type="text" ng-model="todo.task" ng-blur="blurHandler(todo)" ng-class="{hide: !editing}"/>
+		            <i class="fa fa-circle-o" ng-click="toggleTodo(todo)" ng-class="{hide: (todo.editing || todo.done)}"></i>
+		            <i class="fa fa-check-circle-o" ng-click="toggleTodo(todo)" ng-class="{hide: (todo.editing || !todo.done)}"></i>
+		            <p ng-class="{hide: todo.editing, strike: todo.done}" ng-dblclick="toggleEditing(todo)">{{todo.task}}</p>
+		            <i class="fa fa-trash-o" ng-click="deleteTodo(todo.id)" ng-class="{hide: todo.editing}"></i>
+		            <input type="text" ng-model="todo.task" ng-blur="blurHandler(todo)" ng-class="{hide: !todo.editing}"/>
 		        </article>
 			</section>
 		</section>
@@ -217,9 +221,13 @@
 					},
 					deleteTodo: function(id) {
 
-	                    model = model.filter(function(todo) {
+	                    model.some(function(todo, index) {
 
-	                        return todo.id !== id;
+	                        if (todo.id === id) { 
+
+	                            model.splice(index, 1);
+	                            return true;
+	                        }
 	                    });
 					},
 					editTodo: function(updatedTodo) {
@@ -234,16 +242,24 @@
 	                    });
 					},
 					getAllTodos: function() {
-						return model.slice();
+						return model;
 					}
 				};
 			})
 			.controller('TodoController', ['$scope', 'TodoFactory', function($scope, todoFactory) {
 				
-				$scope.editing = false;
 				$scope.todos = todoFactory.getAllTodos();
-				$scope.addTodo = todoFactory.addTodo;
 				$scope.deleteTodo = todoFactory.deleteTodo;
+
+				$scope.toggleEditing = function(todo) {
+					todo.editing = !todo.editing;
+				};
+
+				$scope.addTodo = function(task) {
+					$scope.newtask = '';
+					todoFactory.addTodo(task);
+				};
+
 				$scope.toggleTodo = function(todo) {
 
 					todo.done = !todo.done;
@@ -252,7 +268,7 @@
 
 				$scope.blurHandler = function(todo) {
 					todoFactory.editTodo(todo);
-					$scope.editing = false;
+					todo.editing = false;
 				};
 
 			}]);
